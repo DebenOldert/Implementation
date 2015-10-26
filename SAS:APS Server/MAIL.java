@@ -9,14 +9,14 @@ import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeMessage;
 
 /*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
+ * Feel free to copy/use it for your own project.
+ * Keep in mind that it took me several days/weeks, beers and asperines to make this.
+ * So be nice, and give me some credit, I won't bite and it won't hurt you.
  */
 
 /**
  *
- * @author Deben
+ * @author Deben Oldert
  */
 public class MAIL {
     public boolean send(String mail, String subject, String body){

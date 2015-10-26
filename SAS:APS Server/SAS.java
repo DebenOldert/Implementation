@@ -1,7 +1,7 @@
 /*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
+ * Feel free to copy/use it for your own project.
+ * Keep in mind that it took me several days/weeks, beers and asperines to make this.
+ * So be nice, and give me some credit, I won't bite and it won't hurt you.
  */
 
 import java.io.IOException;
@@ -22,7 +22,7 @@ import org.json.simple.parser.ParseException;
 
 /**
  *
- * @author Deben
+ * @author Deben Oldert
  */
 @WebServlet(urlPatterns = {"/SAS"})
 public class SAS extends HttpServlet {
@@ -32,13 +32,13 @@ public class SAS extends HttpServlet {
     int ldapError;
     SQL sql;
     ResultSet result;
-    final Object T3 = new Object();
-    final Object T2 = new Object();
-    final Object T1 = new Object();
+    //final Object T3 = new Object();
+    //final Object T2 = new Object();
+    //final Object T1 = new Object();
     String req;
     String reqBody;
     int i;
-    int timeout = 60;
+    int timeout = 30;
     boolean finished = false;
 
     public SAS() throws ClassNotFoundException, SQLException, InstantiationException, IllegalAccessException {
@@ -123,35 +123,44 @@ public class SAS extends HttpServlet {
                     tmpBody = tmpJSON.toJSONString();
 
                     HashMap jsonAnswer = function.defragJSON(function.makeRequest("POST", function.getURL("APS"), tmpBody));
-                    //System.out.print(jsonAnswer);
                     if(jsonAnswer.get("result").equals("0")) {
                         if(jsonAnswer.containsKey("serviceType")) {
                             System.out.println("SENDING PUSH NOTIFICATION");
-                            tmpJSON = new JSONObject();
-                                tmpJSON.put("function", "notify");
-                                tmpJSON.put("requestId", requestId);
-                                tmpJSON.put("serviceType", (String) jsonAnswer.get("serviceType"));
-                                tmpJSON.put("serviceNumber", (String) jsonAnswer.get("serviceNumber"));
-                                tmpJSON.put("apiKey", (String) jsonAnswer.get("apiKey"));
-                                tmpJSON.put("deviceId", (String) jsonAnswer.get("deviceId"));
-                            tmpBody = tmpJSON.toJSONString();
-                            System.out.println("%%%%%%%%%%%%%%%");
-                            System.out.println((String) jsonAnswer.get("serviceType"));
-                            //function.defragJSON(function.makeRequest("POST", function.getURL((String) jsonAnswer.get("serviceType")), tmpBody));
-                            sql.threadUpdate(requestId, "request", null);
+                            String[] info = {
+                                            "deviceId",
+                                            "serviceNumber",
+                                            "serviceType",
+                                            "notificationId",
+                                            "apiKey"};
+                            HashMap userInfo = ldap.getUserInfo(info);
+                            
+                            JSONObject exData = new JSONObject();
+                            exData.put("requestId", requestId);
+                            
+                            JSONObject data = new JSONObject();
+                            data.put("data", exData);
+                            data.put("to", userInfo.get("notificationId"));
+                                                      
+                            answer = function.makeRequest("POST", function.getURL(jsonAnswer.get("serviceType").toString()), data.toJSONString());
+                            
+                            sql.threadUpdate(requestId, "request", answer);
                             for(i = 1; i<=timeout && !finished; i++) {
                                 result = sql.stmt.executeQuery("SELECT `state`, `data` FROM `thread` WHERE `threadId`='"+requestId+"'");
-                                //System.out.println("GOT RESULT");
                                 if(result.first()) {
-                                    //System.out.println("GOT VALID RESULT state: "+result.getString("state")+" || data: "+result.getString("data"));
-                                    if(result.getString("state").equals("repley")) {
-                                        //System.out.println("GOT REPLEY");
+                                    if(result.getString("state").equals("reply")) {
                                         
                                         if(result.getString("data") == null || result.getString("data").equals("") || result.getString("data").equals("null")) {
                                             outputResult(response, 601, requestId, null, true);
                                             finished = true;
                                         } else {
-                                            outputResult(response, Integer.parseInt((String) jsonAnswer.get("result")), requestId, function.defragJSON(result.getString("data")), true);
+                                            HashMap sqlResult = function.defragJSON(result.getString("data"));
+                                            if(sqlResult.get("confirmation").equals("approved")) {
+                                                outputResult(response, 0, requestId, function.defragJSON(result.getString("data")), false);
+                                            }
+                                            else {
+                                                outputResult(response, 1, requestId, function.defragJSON(result.getString("data")), false);
+                                            }
+                                            sql.threadUpdate(requestId, "done", "{\"result\":0}");
                                             finished = true;
                                             break;
                                         }
@@ -162,7 +171,6 @@ public class SAS extends HttpServlet {
                                     }
                                 }
                                 else {
-                                    //System.out.println("GOT INVALID RESULT");
                                     outputResult(response, 602, requestId, null, true);
                                     finished = true;
                                     break;
@@ -175,6 +183,7 @@ public class SAS extends HttpServlet {
                             }
                             
                         } else {
+                            outputResult(response, 2, requestId, null, false);
                             System.out.println("SENDING EMAIL");
                             tmpJSON = new JSONObject();
                                 tmpJSON.put("function", "sendmail");
@@ -188,22 +197,24 @@ public class SAS extends HttpServlet {
                                     + "<li>Download and install our app at: "+function.getURL("STORE")+"</li>"
                                     + "<li>Start it: "+function.getURL("APP")+"</li></ol>"
                                     + "We currently don't support iPhone. Sorry for the inconvience.<br><br>"
+                                    + "Your registration code is: <b>"+function.genRegCode(json.get("username").toString())+"</b>.<br><br>"
                                     + "Regards,<br>"
                                     + "The IT Security department");
                             tmpBody = tmpJSON.toJSONString();
                             jsonAnswer = function.defragJSON(function.makeRequest("POST", function.getURL("APS"), tmpBody));
+                            System.out.println(jsonAnswer);
                             if(jsonAnswer.get("result").equals("0")) {
                                     String state;
                                     String data;
                                     
-                                    for(i=1; i<=timeout && !finished; i++) {
+                                    for(i=1; i<=300 && !finished; i++) {
                                         result = sql.stmt.executeQuery("SELECT state,data FROM thread WHERE threadId='"+requestId+"'");
                                         if(result.first()) {
                                             state = result.getString("state");
                                             data = result.getString("data");
-                                            if(state.equals("repley")) {
-                                                answer = function.makeRequest("POST", function.getURL("APS"), data);
-                                                outputResult(response, 0, requestId, null, true);
+                                            if(state.equals("request")) {
+                                                System.out.println("Got response");
+                                                sql.threadUpdate(requestId, "reply", function.makeRequest("POST", function.getURL("APS"), data));
                                                 finished = true;
                                             } else {
                                                 System.out.println("WAITING "+i+" SECONDS");
@@ -216,7 +227,7 @@ public class SAS extends HttpServlet {
                                         }
                                     }
                                     System.out.println("WAITED "+i+" SECONDS");
-                                    if(i > timeout) {
+                                    if(i > 300) {
                                         outputResult(response, 950, requestId, null, true);
                                     }
                             } else {
@@ -225,34 +236,98 @@ public class SAS extends HttpServlet {
                             }
                         }
                     } else {
-                        outputResult(response, 1, requestId, null, true);
+                        outputResult(response, Integer.parseInt((String)jsonAnswer.get("result")), requestId, null, true);
                     }
                     
                     break;
                 case "register":
                     System.out.println("##### SAS >> REGISTER");
                     if((ldapError = ldap.userCheck()) == 0) {
-                        sql.threadUpdate(requestId, "repley", reqBody);
-                        outputResult(response, 0, requestId, null, false);
-                        /*result = sql.stmt.executeQuery("SELECT state,data FROM thread WHERE threadId='"+requestId+"'");
-                            if(result.first()) {
-                                int resultCode = result.getInt("result");
-                                outputResult(response, resultCode, requestId, null, false); 
+                        String username = json.get("username").toString();
+                        String regCode = json.get("registerCode").toString();
+                        if(username != null && regCode != null) {
+                            if(function.checkRegCode(regCode, username)) {
+                                System.out.println("REGCODE PASSED");
+                                sql.threadUpdate(req, "request", reqBody);
+                                String state;
+                                HashMap data;
+                                for(i=1; i<=10; i++) {
+                                    System.out.println("LOOP STARTED");
+                                        result = sql.stmt.executeQuery("SELECT state,data FROM thread WHERE threadId='"+requestId+"'");
+                                        if(result.first()) {
+                                            System.out.println("GOT SQL");
+                                            state = result.getString("state");
+                                            System.out.println(state);
+                                            if(state.equals("reply")) {
+                                                System.out.println("Got final response");
+                                                data = function.defragJSON(result.getString("data"));
+                                                outputResult(response, Integer.parseInt(data.get("result").toString()), requestId, null, true);
+                                                System.out.println("OUTPUT");
+                                                return;
+                                            } else {
+                                                System.out.println("REG WAITING "+i+" SECONDS");
+                                                Thread.sleep(1000);
+                                            }
+                                            
+                                        } else {
+                                            outputResult(response, 602, requestId, null, true);
+                                        }
+                                    }
+                                if(i > 10) {
+                                    outputResult(response, 950, requestId, null, true);
+                                }
                             }
                             else {
-                                outputResult(response, 602, requestId, null, true);
-                            }*/
+                                outputResult(response, 5, requestId, null, true);
+                            }
+                        }
+                        else {
+                            outputResult(response, 560, requestId, null, true);
+                        }
                     } else {
                         outputResult(response, ldapError, requestId, null, true);
                     }
                     break;
                 case "confirm":
                     System.out.println("##### SAS >> CONFIRM");
-                    //System.out.println("Body: "+reqBody);
-                    sql.threadUpdate(requestId, "repley", reqBody);
-                    //sql.stmt.execute("UPDATE thread set `state`='repley',`data`="+function.getBody(request.getReader())+" WHERE `threadId`='"+requestId+"'");
+                    sql.threadUpdate(requestId, "reply", reqBody);
+                    String state;
+                    HashMap data;
+                    for(i=1; i<=10; i++){
+                        result = sql.stmt.executeQuery("SELECT state,data FROM thread WHERE threadId='"+requestId+"'");
+                        if(result.first()) {
+                            System.out.println("GOT SQL");
+                            state = result.getString("state");
+                            System.out.println(state);
+                            if(state.equals("done")) {
+                                System.out.println("Got final response");
+                                data = function.defragJSON(result.getString("data"));
+                                System.out.println(data);
+                                outputResult(response, Integer.parseInt(data.get("result").toString()), requestId, null, true);
+                                System.out.println("OUTPUT");
+                                return;
+                            } else {
+                                System.out.println("REG WAITING "+i+" SECONDS");
+                                Thread.sleep(1000);
+                            }
+                                            
+                        } else {
+                            outputResult(response, 602, requestId, null, true);
+                        }
+                    }
+                    if(i > 10) {
+                        outputResult(response, 950, requestId, null, true);
+                    }
+                    
+                    
                     outputResult(response, 0, requestId, null, false);
                     break;
+                case "clean":
+                    sql.clean();
+                    outputResult(response, 0, requestId, null, false);
+                    break;
+                default:
+                    outputResult(response, 555, requestId, null, true);
             }
         
             
@@ -269,8 +344,6 @@ public class SAS extends HttpServlet {
         array.put("resultText", code.getCodeText(errorCode));
         array.put("requestId", requestId);
         
-
-        //extra.forEach((k, v) -> System.out.println("key: "+k+" value:"+v));
         if(extra != null) {
             if(extra.containsKey("confirmation")) {
                 array.put("confirmation", extra.get("confirmation"));
@@ -287,7 +360,6 @@ public class SAS extends HttpServlet {
             sql.threadUpdate(requestId, "terminate", null);
         }
          try (PrintWriter out = response.getWriter()) {
-            /* TODO output your page here. You may use following sample code. */
             out.println(array);
         } 
     }

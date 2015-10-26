@@ -1,7 +1,7 @@
 /*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
+ * Feel free to copy/use it for your own project.
+ * Keep in mind that it took me several days/weeks, beers and asperines to make this.
+ * So be nice, and give me some credit, I won't bite and it won't hurt you.
  */
 
 import java.util.HashMap;
@@ -23,12 +23,13 @@ import javax.naming.directory.SearchResult;
 
 /**
  *
- * @author Deben
+ * @author Deben Oldert
  */
 public class LDAP {
     private static DirContext ctx;
     private static String userName;
     private static String passWord;
+    private static String base = "dc=vpn,dc=local";
 
     LDAP(String username, String password) throws NamingException {
         Hashtable<String, String> env = new Hashtable();
@@ -52,7 +53,7 @@ public class LDAP {
     }
     
     public int userCheck() throws NamingException {
-        Hashtable tmpEnv = (Hashtable) ctx.getEnvironment().clone();
+        /*Hashtable tmpEnv = (Hashtable) ctx.getEnvironment().clone();
         
         tmpEnv.put(Context.SECURITY_PRINCIPAL, userName);
         tmpEnv.put(Context.SECURITY_CREDENTIALS, passWord);
@@ -63,7 +64,25 @@ public class LDAP {
         }
         catch(NamingException e) {
             return getErrorCode(e.toString()) + 700;
+        }*/
+        try {
+            String[] key = {"cn"};
+
+            SearchControls cons = new SearchControls();
+            cons.setSearchScope(SearchControls.SUBTREE_SCOPE);
+            cons.setReturningAttributes(key);
+            NamingEnumeration<SearchResult> answer = ctx.search(base, "cn=" + userName, cons);
+            if(answer.hasMore()) {
+                return 0;
+            }
+            else {
+                return 730;
+            }
         }
+        catch(NamingException e) {
+                return getErrorCode(e.toString()) + 700;
+                }
+        
     }
     
     public HashMap getUserInfo(String[] keys) throws NamingException {
@@ -72,12 +91,10 @@ public class LDAP {
         cons.setReturningAttributes(keys);
         
         HashMap<String, String> array = new HashMap();
-        NamingEnumeration<SearchResult> answer = ctx.search("dc=vpn,dc=local", "sAMAccountName=" + userName, cons);
+        NamingEnumeration<SearchResult> answer = ctx.search(base, "cn=" + userName, cons);
         
         if(answer.hasMore()) {
             Attributes attrs = answer.next().getAttributes();
-            //System.out.println(attrs.get("serviceType").toString());
-            //array.put("serviceType", attrs.get("serviceType").toString());
             
             String tmp;
             for(String key : keys) {
@@ -95,8 +112,10 @@ public class LDAP {
         
     }
     public boolean writeInfo(String key, String value) {
+        System.out.println("Modding: "+key+", "+value);
         ModificationItem[] mods = new ModificationItem[1];
-        String name = "cn="+userName+",cn=Users,dc=vpn,dc=local";
+        String name = "CN="+userName+",CN=Users,DC=vpn,DC=local";
+        System.out.println(name);
         
         mods[0] = new ModificationItem(DirContext.REPLACE_ATTRIBUTE,
           new BasicAttribute(key, value));

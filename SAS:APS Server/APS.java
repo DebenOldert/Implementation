@@ -1,7 +1,7 @@
 /*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
+ * Feel free to copy/use it for your own project.
+ * Keep in mind that it took me several days/weeks, beers and asperines to make this.
+ * So be nice, and give me some credit, I won't bite and it won't hurt you.
  */
 
 import java.io.IOException;
@@ -20,7 +20,7 @@ import org.json.simple.parser.ParseException;
 
 /**
  *
- * @author Deben
+ * @author Deben Oldert
  */
 @WebServlet(urlPatterns = {"/APS"})
 public class APS extends HttpServlet {
@@ -142,9 +142,14 @@ public class APS extends HttpServlet {
                         String[] keys = {"serviceType",
                                          "serviceNumber",
                                          "notificationId",
+                                         "apiKey",
                                          "deviceId"};
                         boolean state;
                         for(String key : keys) {
+                            if(!json.containsKey(key)) {
+                                outputResult(response, 560, requestId, null);
+                                return;
+                            }
                             state = ldap.writeInfo(key, (String) json.get(key));
                             if(!state) {
                                 outputResult(response, 82, requestId, null);
