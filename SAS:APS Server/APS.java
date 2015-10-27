@@ -162,6 +162,29 @@ public class APS extends HttpServlet {
                         outputResult(response, ldapError, requestId, null);
                     }
                     break;
+                case "unregister":
+                    System.out.println("##### APS >> UNREGISTER");
+                    if((ldapError = ldap.userCheck()) == 0) {
+                        String[] keys = {"serviceType",
+                                         "serviceNumber",
+                                         "notificationId",
+                                         "apiKey",
+                                         "deviceId"};
+                        boolean state;
+                        for(String key : keys) {
+                            System.out.println("TRY: "+key);
+                            state = ldap.deleteInfo(key);
+                            if(!state) {
+                                outputResult(response, 82, requestId, null);
+                                return;
+                            }
+                        }
+                        outputResult(response, 0, requestId, null);
+                    }
+                    else {
+                        outputResult(response, ldapError, requestId, null);
+                    }
+                    break;
             }
         } catch (ParseException | NamingException ex) {
             Logger.getLogger(APS.class.getName()).log(Level.SEVERE, null, ex);
