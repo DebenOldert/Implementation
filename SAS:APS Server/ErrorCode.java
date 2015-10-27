@@ -28,7 +28,6 @@ public class ErrorCode {
         list.put(83, "Failed to register device");
         
         // Data errors
-        
         list.put(500, "No data given");
         list.put(555, "Unsupported function");
         list.put(560, "Missing variables");
