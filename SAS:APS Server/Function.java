@@ -91,19 +91,21 @@ public class Function {
     public String getURL(String server) {
         switch(server) {
             case "ARS":
-                return "http://localhost:8080/Implementation/ARS";
+                return "http://192.168.2.240:8080/Implementation/ARS";
             case "SAS":
-                return "http://localhost:8080/Implementation/SAS";
+                return "http://192.168.2.240:8080/Implementation/SAS";
             case "APS":
-                return "http://localhost:8080/Implementation/APS";
+                return "http://192.168.2.240:8080/Implementation/APS";
             case "APP":
-                return "http://test.com";
-            case "STORE":
-                return "http://google.com";
+                return "http://www.implementation.deben.dev/Login";
             case "GCM":
                 return "https://gcm-http.googleapis.com/gcm/send";
             case "APNS":
                 return "http://apple.com";
+            case "PLAYSTORE":
+                return "http://77.163.130.26:8080/Implementation/Download?device=android";
+            case "APPSTORE":
+                return "http://77.163.130.26:8080/Implementation/Download?device=ios";
             default:
                 return null;
         }
