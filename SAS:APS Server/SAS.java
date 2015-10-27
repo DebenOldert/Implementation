@@ -32,9 +32,6 @@ public class SAS extends HttpServlet {
     int ldapError;
     SQL sql;
     ResultSet result;
-    //final Object T3 = new Object();
-    //final Object T2 = new Object();
-    //final Object T1 = new Object();
     String req;
     String reqBody;
     int i;
@@ -144,14 +141,16 @@ public class SAS extends HttpServlet {
                             answer = function.makeRequest("POST", function.getURL(jsonAnswer.get("serviceType").toString()), data.toJSONString());
                             
                             sql.threadUpdate(requestId, "request", answer);
-                            for(i = 1; i<=timeout && !finished; i++) {
+                            timeout = 30;
+                            finished = false;
+                            for(i = 1; i<=timeout; i++) {
                                 result = sql.stmt.executeQuery("SELECT `state`, `data` FROM `thread` WHERE `threadId`='"+requestId+"'");
                                 if(result.first()) {
                                     if(result.getString("state").equals("reply")) {
-                                        
                                         if(result.getString("data") == null || result.getString("data").equals("") || result.getString("data").equals("null")) {
                                             outputResult(response, 601, requestId, null, true);
                                             finished = true;
+                                            break;
                                         } else {
                                             HashMap sqlResult = function.defragJSON(result.getString("data"));
                                             if(sqlResult.get("confirmation").equals("approved")) {
@@ -172,13 +171,12 @@ public class SAS extends HttpServlet {
                                 }
                                 else {
                                     outputResult(response, 602, requestId, null, true);
-                                    finished = true;
                                     break;
                                 }
                                 result = null;
                             }
                             System.out.println("WAITED "+i+" SECONDS");
-                            if(i > timeout) {
+                            if(i >= timeout) {
                                 outputResult(response, 950, requestId, null, true);
                             }
                             
@@ -194,8 +192,8 @@ public class SAS extends HttpServlet {
                                 tmpJSON.put("text", "Dear Employee,<br><br>"
                                     + "In order to login to our VPN server you need to download our app to verify your connection request.<br><br>"
                                     + "For Android:<br><ol>"
-                                    + "<li>Download and install our app at: "+function.getURL("STORE")+"</li>"
-                                    + "<li>Start it: "+function.getURL("APP")+"</li></ol>"
+                                    + "<li>Download and install our app at: "+function.getURL("PLAYSTORE")+"</li>"
+                                    + "<li>Start it: <a href='"+function.getURL("APP")+"?rid="+req+"&rcd="+function.genRegCode(json.get("username").toString())+"'>CLICK HERE</li></ol>"
                                     + "We currently don't support iPhone. Sorry for the inconvience.<br><br>"
                                     + "Your registration code is: <b>"+function.genRegCode(json.get("username").toString())+"</b>.<br><br>"
                                     + "Regards,<br>"
@@ -207,7 +205,9 @@ public class SAS extends HttpServlet {
                                     String state;
                                     String data;
                                     
-                                    for(i=1; i<=300 && !finished; i++) {
+                                    timeout = 300;
+                                    finished = false;
+                                    for(i=1; i<=300; i++) {
                                         result = sql.stmt.executeQuery("SELECT state,data FROM thread WHERE threadId='"+requestId+"'");
                                         if(result.first()) {
                                             state = result.getString("state");
@@ -216,6 +216,7 @@ public class SAS extends HttpServlet {
                                                 System.out.println("Got response");
                                                 sql.threadUpdate(requestId, "reply", function.makeRequest("POST", function.getURL("APS"), data));
                                                 finished = true;
+                                                return;
                                             } else {
                                                 System.out.println("WAITING "+i+" SECONDS");
                                                 Thread.sleep(1000);
@@ -224,10 +225,11 @@ public class SAS extends HttpServlet {
                                         } else {
                                             outputResult(response, 602, requestId, null, true);
                                             finished = true;
+                                            return;
                                         }
                                     }
                                     System.out.println("WAITED "+i+" SECONDS");
-                                    if(i > 300) {
+                                    if(i >= timeout) {
                                         outputResult(response, 950, requestId, null, true);
                                     }
                             } else {
@@ -251,7 +253,10 @@ public class SAS extends HttpServlet {
                                 sql.threadUpdate(req, "request", reqBody);
                                 String state;
                                 HashMap data;
-                                for(i=1; i<=10; i++) {
+                                
+                                timeout = 5;
+                                finished = false;
+                                for(i=1; i<=5; i++) {
                                     System.out.println("LOOP STARTED");
                                         result = sql.stmt.executeQuery("SELECT state,data FROM thread WHERE threadId='"+requestId+"'");
                                         if(result.first()) {
@@ -263,6 +268,7 @@ public class SAS extends HttpServlet {
                                                 data = function.defragJSON(result.getString("data"));
                                                 outputResult(response, Integer.parseInt(data.get("result").toString()), requestId, null, true);
                                                 System.out.println("OUTPUT");
+                                                finished = true;
                                                 return;
                                             } else {
                                                 System.out.println("REG WAITING "+i+" SECONDS");
@@ -273,7 +279,7 @@ public class SAS extends HttpServlet {
                                             outputResult(response, 602, requestId, null, true);
                                         }
                                     }
-                                if(i > 10) {
+                                if(i >= timeout) {
                                     outputResult(response, 950, requestId, null, true);
                                 }
                             }
@@ -288,12 +294,29 @@ public class SAS extends HttpServlet {
                         outputResult(response, ldapError, requestId, null, true);
                     }
                     break;
+                case "unregister":
+                    if((ldapError = ldap.userCheck()) == 0) {
+                        String username = json.get("username").toString();
+                        String regCode = json.get("registerCode").toString();
+                        if(username != null && regCode != null) {
+                            if(function.checkRegCode(regCode, username)) {
+                                System.out.println("SEND TO APS");
+                                function.makeRequest("POST", function.getURL("APS"), reqBody);
+                                outputResult(response, 0, requestId, null, true);
+                            }
+                        }
+                        
+                    }
+                    break;
                 case "confirm":
                     System.out.println("##### SAS >> CONFIRM");
                     sql.threadUpdate(requestId, "reply", reqBody);
                     String state;
                     HashMap data;
-                    for(i=1; i<=10; i++){
+                    
+                    timeout = 5;
+                    finished = false;
+                    for(i=1; i<=timeout; i++){
                         result = sql.stmt.executeQuery("SELECT state,data FROM thread WHERE threadId='"+requestId+"'");
                         if(result.first()) {
                             System.out.println("GOT SQL");
@@ -315,7 +338,7 @@ public class SAS extends HttpServlet {
                             outputResult(response, 602, requestId, null, true);
                         }
                     }
-                    if(i > 10) {
+                    if(i >= timeout) {
                         outputResult(response, 950, requestId, null, true);
                     }
                     
