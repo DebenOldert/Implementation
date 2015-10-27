@@ -1,4 +1,4 @@
-<h1>HvA project Implementation - 2015</h1><br>
+#HvA project Implementation - 2015
 Currently under development<br>
 This project implementation, for the University of Applied Sciences of Amsterdam<br>
  <br>
