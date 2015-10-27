@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">Access control</string>
+    <string name="action_settings">Settings</string>
+    <string name="title_activity_login">LoginActivity</string>
+    <string name="login">Type here your username and password to register your phone to our VPN service</string>
+    <string name="Main">ONLY grand access if YOU want to login.</string>
+    <string name="No_req">There are currently no pending requests. You will get them when you try to login through VPN</string>
+    <string name="req">There is an active VPN connection request. If it\'s you, you can tab grand access</string>
+</resources>
