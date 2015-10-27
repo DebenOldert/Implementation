@@ -13,6 +13,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import javax.naming.NamingEnumeration;
 import javax.naming.NamingException;
+import javax.naming.directory.Attribute;
 import javax.naming.directory.Attributes;
 import javax.naming.directory.BasicAttribute;
 import javax.naming.directory.InitialDirContext;
@@ -119,6 +120,20 @@ public class LDAP {
         
         mods[0] = new ModificationItem(DirContext.REPLACE_ATTRIBUTE,
           new BasicAttribute(key, value));
+        try {
+            ctx.modifyAttributes(name, mods);
+        }
+        catch(NamingException e){
+            System.out.println(e);
+            return false;
+        }
+        return true;
+    }
+    public boolean deleteInfo(String key) {
+        ModificationItem[] mods = new ModificationItem[1];
+        String name = "CN="+userName+",CN=Users,DC=vpn,DC=local";
+        System.out.println("unregistering: "+key);
+        mods[0] = new ModificationItem(DirContext.REMOVE_ATTRIBUTE,new BasicAttribute(key));
         try {
             ctx.modifyAttributes(name, mods);
         }
