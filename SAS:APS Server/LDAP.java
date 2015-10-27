@@ -40,7 +40,7 @@ public class LDAP {
         env.put(Context.PROVIDER_URL, "ldap://192.168.2.240:389");
         env.put(Context.SECURITY_AUTHENTICATION, "simple");
         env.put(Context.SECURITY_PRINCIPAL, "VPN\\Administrator");
-        env.put(Context.SECURITY_CREDENTIALS, "Magnesium12");
+        env.put(Context.SECURITY_CREDENTIALS, "XXX");
         
         try {
             ctx = new InitialDirContext(env);
@@ -54,18 +54,7 @@ public class LDAP {
     }
     
     public int userCheck() throws NamingException {
-        /*Hashtable tmpEnv = (Hashtable) ctx.getEnvironment().clone();
         
-        tmpEnv.put(Context.SECURITY_PRINCIPAL, userName);
-        tmpEnv.put(Context.SECURITY_CREDENTIALS, passWord);
-        
-        try {
-            new InitialDirContext(tmpEnv);
-            return 0;
-        }
-        catch(NamingException e) {
-            return getErrorCode(e.toString()) + 700;
-        }*/
         try {
             String[] key = {"cn"};
 
