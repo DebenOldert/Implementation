@@ -1,34 +1,45 @@
+/*
+ * Feel free to copy/use it for your own project.
+ * Keep in mind that it took me several days/weeks, beers and asperines to make this.
+ * So be nice, and give me some credit, I won't bite and it won't hurt you.
+ *
+ * Created by Deben Oldert
+ */
+
 package com.dev.deben.implementation;
 
+import android.app.ProgressDialog;
 import android.content.Intent;
+import android.graphics.Color;
 import android.net.Uri;
-import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
-import android.view.Menu;
-import android.view.MenuItem;
+import android.os.StrictMode;
+import android.support.v7.app.AppCompatActivity;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
-import android.app.ProgressDialog;
+
+import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.GoogleApiAvailability;
+import com.loopj.android.http.AsyncHttpClient;
+import com.loopj.android.http.AsyncHttpResponseHandler;
 
 import org.json.JSONException;
 import org.json.simple.JSONObject;
 import org.json.simple.JSONValue;
 
 import java.io.IOException;
-import java.io.StringWriter;
 import java.util.HashMap;
-import android.os.StrictMode;
-import com.google.android.gms.common.ConnectionResult;
-import com.google.android.gms.common.GoogleApiAvailability;
+
+import cz.msebera.android.httpclient.Header;
+import cz.msebera.android.httpclient.entity.StringEntity;
 
 public class LoginActivity extends AppCompatActivity {
 
     function fn = new function(this);
-    TextView error;
+    TextView err;
     Button login;
-    String regCode;
     EditText userField;
     EditText passField;
     EditText codeField;
@@ -42,8 +53,8 @@ public class LoginActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_login);
 
-        error = (TextView) findViewById(R.id.error);
-        error.setVisibility(View.INVISIBLE);
+        err = (TextView) findViewById(R.id.error);
+        err.setVisibility(View.INVISIBLE);
         login = (Button) findViewById(R.id.login);
         userField = (EditText) findViewById(R.id.username);
         passField = (EditText) findViewById(R.id.password);
@@ -111,28 +122,30 @@ public class LoginActivity extends AppCompatActivity {
         });
     }
 
-    private void login(String username, String password, String code) throws IOException, JSONException {
-        error.setVisibility(View.INVISIBLE);
-        error.setText("");
+    private void login(String usr, String pass, String cod) throws IOException, JSONException {
+        final String username = usr;
+        final String password = pass;
+        final String reqCode = cod;
+        final ProgressDialog progress = new ProgressDialog(this);
+        err.setVisibility(View.INVISIBLE);
+        err.setText("");
         if(username == null || username.equals("") && username.length() < 5) {
-            error.setText("Username too short");
-            error.setVisibility(View.VISIBLE);
+            err.setText("Username too short");
+            err.setVisibility(View.VISIBLE);
             return;
         }
         if(password == null || password.equals("") && password.length() < 5) {
-            error.setText("Password too short");
-            error.setVisibility(View.VISIBLE);
+            err.setText("Password too short");
+            err.setVisibility(View.VISIBLE);
             return;
         }
-        if(code == null || code.equals("") || code.length() != 4) {
-            error.setText("Invalid register code");
-            error.setVisibility(View.VISIBLE);
+        if(reqCode == null || reqCode.equals("") || reqCode.length() != 4) {
+            err.setText("Invalid register code");
+            err.setVisibility(View.VISIBLE);
             return;
         }
-
-            ProgressDialog progress = new ProgressDialog(this);
-            progress.setTitle("Registering");
-            progress.setMessage("Processing request...");
+            progress.setTitle("Registering your device");
+            progress.setMessage("Processing...");
             progress.setCancelable(false);
             progress.show();
 
@@ -147,44 +160,52 @@ public class LoginActivity extends AppCompatActivity {
             JSONObject json = new JSONObject();
             json.put("function", "register");
             json.put("requestId", fn.readSetting("requestId"));
-            json.put("registerCode", code);
+            json.put("registerCode", reqCode);
             json.put("username", username);
             json.put("password", password);
             json.put("userInfo", info);
 
-            StringWriter out = new StringWriter();
-            json.writeJSONString(out);
+        AsyncHttpClient client = new AsyncHttpClient();
 
-            String response = fn.makeRequest("GET", fn.readSetting("serverUrl"), out.toString());
-            System.out.println(response);
-            if(response.length() == 0 || response == null || response == "") {
+        client.post(this, fn.readSetting("serverUrl"), new StringEntity(json.toJSONString()), "application/json", new AsyncHttpResponseHandler() {
+            @Override
+            public void onFailure(int code, Header[] headers, byte[] responseBody, Throwable error) {
+                err.setTextColor(Color.parseColor("#ff1700"));
+                err.setText("HTTP ERROR: " + code);
+                err.setVisibility(View.VISIBLE);
                 progress.dismiss();
-                error.setText("Request Failed. Try again later");
-                error.setVisibility(View.VISIBLE);
-                return;
             }
-            else {
-                Object obj = JSONValue.parse(response);
-                JSONObject res = (JSONObject) obj;
-                if(res.get("result").equals("0") || Integer.parseInt(res.get("result").toString()) == 0) {
 
+            @Override
+            public void onSuccess(int code, Header[] headers, byte[] responseBody) {
+                String res = new String(responseBody);
+                Object obj = JSONValue.parse(res);
+                JSONObject response = (JSONObject) obj;
+
+                if (response.get("result") != null && response.get("result").equals("0") || Integer.parseInt(response.get("result").toString()) == 0) {
                     HashMap<String, String> set = new HashMap<>();
                     set.put("username", username);
                     set.put("password", password);
-                    set.put("registerCode", code);
+                    set.put("registerCode", reqCode);
                     set.put("requestId", "0");
-                    fn.writeSetting(set);
+                    try {
+                        fn.writeSetting(set);
+                    } catch (IOException | JSONException e) {
+                        e.printStackTrace();
+                    }
                     progress.dismiss();
                     fn.redirect("Main");
-                }
-                else {
+                    err.setVisibility(View.VISIBLE);
                     progress.dismiss();
-                    error.setText("Error "+res.get("result")+": "+res.get("resultText"));
-                    error.setVisibility(View.VISIBLE);
+                } else {
+                    progress.dismiss();
+                    err.setText("Error " + response.get("result") + ": " + response.get("resultText"));
+                    err.setVisibility(View.VISIBLE);
                     return;
                 }
             }
-            return;
+        });
+        return;
     }
     private boolean checkPlayServices() {
         GoogleApiAvailability apiAvailability = GoogleApiAvailability.getInstance();
@@ -193,12 +214,12 @@ public class LoginActivity extends AppCompatActivity {
             if (apiAvailability.isUserResolvableError(resultCode)) {
                 apiAvailability.getErrorDialog(this, resultCode, 9000)
                         .show();
-                error.setText("Service must be up to date in order to use this app");
-                error.setVisibility(View.VISIBLE);
+                err.setText("Service must be up to date in order to use this app");
+                err.setVisibility(View.VISIBLE);
                 login.setEnabled(false);
             } else {
-                error.setText("Device not supported");
-                error.setVisibility(View.VISIBLE);
+                err.setText("Device not supported");
+                err.setVisibility(View.VISIBLE);
                 login.setEnabled(false);
                 finish();
             }

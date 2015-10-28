@@ -1,50 +1,40 @@
+/*
+ * Feel free to copy/use it for your own project.
+ * Keep in mind that it took me several days/weeks, beers and asperines to make this.
+ * So be nice, and give me some credit, I won't bite and it won't hurt you.
+ *
+ * Created by Deben Oldert
+ */
+
 package com.dev.deben.implementation;
 
+import android.app.Notification;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
+import android.content.Context;
+import android.content.Intent;
+import android.os.PowerManager;
+import android.provider.Settings.Secure;
+import android.support.v4.app.NotificationCompat;
+
 import org.json.JSONException;
-//import org.json.JSONObject;
-import org.json.simple.JSONValue;
 import org.json.simple.JSONObject;
+import org.json.simple.JSONValue;
 
 import java.io.BufferedReader;
+import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
-import java.util.HashMap;
-
-import android.app.Notification;
-import android.app.NotificationManager;
-import android.content.ContextWrapper;
-import android.content.Context;
-import android.content.Intent;
-import android.util.Log;
-import android.widget.EditText;
-import android.widget.Toast;
 import java.io.StringWriter;
-import java.util.Map;
 import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
 import java.net.URL;
-import java.io.DataOutputStream;
+import java.util.HashMap;
+import java.util.Map;
 
-import android.provider.Settings.Secure;
-import com.google.android.gms.common.GoogleApiAvailability;
-import com.google.android.gms.common.ConnectionResult;
-
-import com.google.android.gms.gcm.GoogleCloudMessaging;
-import com.google.android.gms.iid.InstanceID;
-import android.support.v4.app.NotificationCompat;
-import android.app.TaskStackBuilder;
-import android.app.PendingIntent;
-import android.app.NotificationManager;
-import android.content.Context;
-
-/**
- * Created by Deben on 21-10-15.
- */
 public class function {
     private static Context ctx;
     private static String settings;
@@ -56,7 +46,6 @@ public class function {
 
     public boolean writeSetting(HashMap<String, String> set) throws IOException, JSONException {
         String jsonText = settingFile();
-        //System.out.println("JSON WRITE BEFORE: "+jsonText);
         if(jsonText != null) {
             Object obj = JSONValue.parse(jsonText);
             JSONObject json = (JSONObject) obj;
@@ -64,7 +53,7 @@ public class function {
                 json.put(entry.getKey(), entry.getValue());
             }
 
-            FileOutputStream fout = ctx.openFileOutput(file, ctx.MODE_PRIVATE);
+            FileOutputStream fout = ctx.openFileOutput(file, Context.MODE_PRIVATE);
             OutputStreamWriter outwr = new OutputStreamWriter(fout);
 
             StringWriter out = new StringWriter();
@@ -75,11 +64,9 @@ public class function {
 
             outwr.write(txt);
             outwr.close();
-            //System.out.println("JSON WRITE AFTER: " + txt);
             return true;
         }
         else{
-            //System.out.println("JSON WRITE NULL");
             return false;
         }
     }
@@ -90,7 +77,7 @@ public class function {
             JSONObject json = (JSONObject) obj;
             json.put(key, value);
 
-            FileOutputStream fout = ctx.openFileOutput(file, ctx.MODE_PRIVATE);
+            FileOutputStream fout = ctx.openFileOutput(file, Context.MODE_PRIVATE);
             OutputStreamWriter outwr = new OutputStreamWriter(fout);
 
             StringWriter out = new StringWriter();
@@ -109,31 +96,10 @@ public class function {
     }
     public void init() throws IOException, JSONException {
         settings = settingFile();
-        System.out.println("INIT START");
-        Object obj = JSONValue.parse(settings);
-        JSONObject json = (JSONObject) obj;
-        if(json.get("apiKey").equals("")) {
-            System.out.println("INIT CREATE");
-
-            Intent intent = new Intent(ctx, InstanceIdService.class);
-            ctx.startService(intent);
-
-            //InstanceIdService srv = new InstanceIdService();
-
-            //HashMap<String, String> set = new HashMap<>();
-            //set.put("apiKey", srv.getToken());
-
-            //System.out.println("TOKEN: "+srv.getToken());
-
-            //writeSetting(set);
-
-            settings = settingFile();
-        }
-        System.out.println("INIT STOP");
     }
 
     public String readSetting(String key) throws JSONException, IOException {
-            Object obj = JSONValue.parse(settings);
+            Object obj = JSONValue.parse((settings != null) ? settings:settingFile());
             JSONObject json = (JSONObject) obj;
             String value = null;
             if (json.get(key) != null) {
@@ -158,9 +124,8 @@ public class function {
     }
 
     private String settingFile() throws IOException, JSONException {
-        ContextWrapper cw = new ContextWrapper(ctx);
 
-        String jsonStr = null;
+        String jsonStr;
 
         System.out.println("Trying to read settings");
 
@@ -168,7 +133,7 @@ public class function {
             FileInputStream fin = ctx.openFileInput(file);
             BufferedReader rd = new BufferedReader(new InputStreamReader(fin));
             StringBuilder sb = new StringBuilder();
-            String line = null;
+            String line;
             while ((line = rd.readLine()) != null) {
                 sb.append(line);
             }
@@ -178,7 +143,7 @@ public class function {
             System.out.println("Read settings");
         }
         catch(IOException e){
-            FileOutputStream fout = ctx.openFileOutput(file, ctx.MODE_PRIVATE);
+            FileOutputStream fout = ctx.openFileOutput(file, Context.MODE_PRIVATE);
             OutputStreamWriter outwr = new OutputStreamWriter(fout);
 
             JSONObject json = new JSONObject();
@@ -201,7 +166,7 @@ public class function {
             outwr.write(jsonStr);
             outwr.close();
         }
-        System.out.println("return settings: "+jsonStr);
+        System.out.println("return settings: " + jsonStr);
         return jsonStr;
 
     }
@@ -346,6 +311,18 @@ public class function {
         System.out.println("BUILDING NOTIFICATION");
         NotificationManager nMgr = (NotificationManager) ctx.getSystemService(Context.NOTIFICATION_SERVICE);
         PendingIntent pi = PendingIntent.getActivity(ctx, 0, new Intent(ctx, MainActivity.class), 0);
+
+        PowerManager pm = (PowerManager)ctx.getSystemService(Context.POWER_SERVICE);
+        boolean active = pm.isInteractive();
+        PowerManager.WakeLock wl;
+        if(!active) {
+            wl = pm.newWakeLock(PowerManager.ACQUIRE_CAUSES_WAKEUP | PowerManager.FULL_WAKE_LOCK, "NOTIFY");
+            wl.acquire(30000);
+        }
+        else {
+            redirect("Main");
+        }
+
         int id = (int)System.currentTimeMillis();
         Notification mBuilder = new NotificationCompat.Builder(ctx)
                         .setSmallIcon(R.drawable.action_logo)
@@ -353,13 +330,20 @@ public class function {
                         .setContentText(msg)
                         .setAutoCancel(true)
                         .setContentIntent(pi)
+                        .setCategory(Notification.CATEGORY_CALL)
                         .build();
+        mBuilder.defaults |= Notification.DEFAULT_VIBRATE;
+        mBuilder.defaults |= Notification.DEFAULT_SOUND;
+
         nMgr.notify(id, mBuilder);
         return id;
-
     }
     public void cancelNotify(int id) {
         NotificationManager nMgr = (NotificationManager) ctx.getSystemService(Context.NOTIFICATION_SERVICE);
         nMgr.cancel(id);
+    }
+    public void cancelNotify() {
+        NotificationManager nMgr = (NotificationManager) ctx.getSystemService(Context.NOTIFICATION_SERVICE);
+        nMgr.cancelAll();
     }
 }
