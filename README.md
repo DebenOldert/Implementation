@@ -19,6 +19,7 @@ Each part has its own folder in this repo. (Except for SAS and APS, same servlet
 There are 2 scenarios, 1 where the user has no device registered and 2 the case where there *is* a device registered.
 ### Scenario 1
 A simple overview if the device is not registered in our APS:
+
 1. ARS send access request over RADIUS to NPS
 2. NPS extension receive access request
 3. NPS extension send authentication request to SAS
@@ -36,6 +37,7 @@ When this is done the user retry to login and will automaticly follow scenario 2
 
 ### Scenarion 2
 When a device is already registered in our APS it goes as followed:
+
 1. ARS send access request over RADIUS to NPS
 2. NPS extension receive access request
 3. NPS extension send authentication request to SAS
