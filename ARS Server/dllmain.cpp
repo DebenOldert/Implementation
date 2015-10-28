@@ -1,3 +1,10 @@
+/*
+ * Feel free to copy/use it for your own project.
+ * Keep in mind that it took me several days/weeks, beers and asperines to make this.
+ * So be nice, and give me some credit, I won't bite and it won't hurt you.
+ */
+// Author: Deben Oldert
+
 //Set includes
 #include <iostream>
 #include <fstream>
