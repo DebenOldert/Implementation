@@ -1,6 +1,6 @@
 #HvA project Implementation - 2015
 Currently under development<br>
-This project implementation, for the University of Applied Sciences of Amsterdam<br>
+This project implementation, for the University of Applied Sciences of Amsterdam/ Hogeschool van Amsterdam<br>
  <br>
   Feel free to copy/use it for your own project.<br>
   Keep in mind that it took me several days/weeks, beers and asperines to make this.<br>
