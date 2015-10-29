@@ -1,11 +1,9 @@
 # HvA project Implementation - 2015
-
-Currently under development.
 This project implementation, for the University of Applied Sciences of Amsterdam/ Hogeschool van Amsterdam.
 
-- Feel free to copy/use it for your own project.
-- Keep in mind that it took me several days/weeks, beers and asperines to make this.
-- So be nice, and give me some credit, I won't bite and it won't hurt you.
+**Feel free to copy/use it for your own project.  
+Keep in mind that it took me several days/weeks, beers and asperines to make this.  
+So be nice, and give me some credit, I won't bite and it won't hurt you.**  
 
 Now that is said, I can explain what I've made.
 First of all you need to understand the different parts of this project.
@@ -15,7 +13,7 @@ There are 4 different parts
 - ARS: Authentication Request Server (VPN server and NPS with our extension DLL)
 - APP: The android/ios app to enable the 2nd Authentication step
 
-Each part has its own folder in this repo. (Except for SAS and APS, same servlet).\
+Each part has its own folder in this repo. (Except for SAS and APS, same servlet).  
 There are 2 scenarios, 1 where the user has no device registered and 2 the case where there *is* a device registered.
 ### Scenario 1
 A simple overview if the device is not registered in our APS:
