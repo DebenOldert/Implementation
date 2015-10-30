@@ -17,6 +17,9 @@ import android.os.PowerManager;
 import android.provider.Settings.Secure;
 import android.support.v4.app.NotificationCompat;
 
+import com.loopj.android.http.AsyncHttpClient;
+import com.loopj.android.http.AsyncHttpResponseHandler;
+
 import org.json.JSONException;
 import org.json.simple.JSONObject;
 import org.json.simple.JSONValue;
@@ -34,6 +37,8 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
+
+import cz.msebera.android.httpclient.entity.StringEntity;
 
 public class function {
     private static Context ctx;
@@ -107,16 +112,7 @@ public class function {
             }
             return value;
     }
-    public void logout() throws IOException, JSONException {
-        JSONObject json = new JSONObject();
-        json.put("function", "unregister");
-        json.put("username", readSetting("username"));
-        json.put("password", readSetting("password"));
-        json.put("registerCode", readSetting("registerCode"));
-        json.put("requestId", "0");
-
-        makeRequest("POST", readSetting("serverUrl"), json.toJSONString());
-
+    public void logout() throws IOException {
         System.out.println("Logging out");
         File del = new File(ctx.getFilesDir().getAbsolutePath(), file);
         del.delete();
@@ -262,35 +258,9 @@ public class function {
         String newCode = genRegCode(str);
         return code.equals(newCode);
     }
-
-    public String makeRequest(String type, String url, String body) throws IOException {
-        System.out.println(url);
-        System.out.println(body);
-        URL obj = new URL(url);
-        HttpURLConnection con = (HttpURLConnection) obj.openConnection();
-
-        con.setRequestMethod(type);
-                con.setRequestProperty("content-type", "application/json");
-
-                con.setDoOutput(true);
-                DataOutputStream wr = new DataOutputStream(con.getOutputStream());
-                wr.writeBytes(body);
-                wr.flush();
-                wr.close();
-
-                BufferedReader rd = new BufferedReader(new InputStreamReader(con.getInputStream()));
-                StringBuilder sb = new StringBuilder();
-                String line = null;
-                while ((line = rd.readLine()) != null) {
-                    sb.append(line);
-                }
-                String response = sb.toString();
-
-                rd.close();
-                con.disconnect();
-
-                return response;
-
+    public void makeRequest(String url, String body, AsyncHttpResponseHandler handle) throws IOException {
+        AsyncHttpClient client = new AsyncHttpClient();
+        client.post(ctx, url, new StringEntity(body), "application/json", handle);
     }
     public void redirect(String act) {
         Intent intent;

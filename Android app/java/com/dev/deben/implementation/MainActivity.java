@@ -9,7 +9,6 @@
 package com.dev.deben.implementation;
 
 import android.app.ProgressDialog;
-import android.content.Context;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
@@ -19,7 +18,7 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
 
-import com.loopj.android.http.*;
+import com.loopj.android.http.AsyncHttpResponseHandler;
 
 import org.json.JSONException;
 import org.json.simple.JSONObject;
@@ -27,7 +26,6 @@ import org.json.simple.JSONValue;
 
 import java.io.IOException;
 
-import cz.msebera.android.httpclient.entity.StringEntity;
 import cz.msebera.android.httpclient.Header;
 
 
@@ -40,7 +38,6 @@ public class MainActivity extends AppCompatActivity {
     Button deny;
     TextView status;
     TextView desc;
-    Context ctx = this;
     boolean opt;
 
     @Override
@@ -53,6 +50,7 @@ public class MainActivity extends AppCompatActivity {
         super.onPause();
         active = false;
     }
+
     @Override
     public void onResume() {
         super.onResume();
@@ -62,12 +60,11 @@ public class MainActivity extends AppCompatActivity {
         status = (TextView) findViewById(R.id.status);
         desc = (TextView) findViewById(R.id.descriptor);
         try {
-            if(fn.readSetting("requestId").equals("0")) {
+            if (fn.readSetting("requestId").equals("0")) {
                 desc.setText(R.string.No_req);
                 accept.setEnabled(false);
                 deny.setEnabled(false);
-            }
-            else {
+            } else {
                 desc.setText(R.string.req);
                 accept.setEnabled(true);
                 deny.setEnabled(true);
@@ -85,17 +82,15 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
 
-
         accept = (Button) findViewById(R.id.Accept);
         deny = (Button) findViewById(R.id.Deny);
         status = (TextView) findViewById(R.id.status);
         try {
-            if(fn.readSetting("requestId").equals("0")) {
+            if (fn.readSetting("requestId").equals("0")) {
                 status.setText("@string/No_req");
                 accept.setEnabled(false);
                 deny.setEnabled(false);
-            }
-            else {
+            } else {
                 status.setText("@string/req");
                 accept.setEnabled(true);
                 deny.setEnabled(true);
@@ -133,28 +128,65 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
 
-       menu.add("Unregister");
+        menu.add("Unregister");
 
         return super.onCreateOptionsMenu(menu);
     }
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
+        final ProgressDialog progress = new ProgressDialog(this);
         System.out.println(item.getItemId());
-        switch(item.getItemId()) {
+        switch (item.getItemId()) {
             case 0:
                 try {
-                    fn.logout();
+                    JSONObject json = new JSONObject();
+                    json.put("function", "unregister");
+                    json.put("username", fn.readSetting("username"));
+                    json.put("password", fn.readSetting("password"));
+                    json.put("registerCode", fn.readSetting("registerCode"));
+                    json.put("requestId", "0");
+                    fn.makeRequest(fn.readSetting("serverUrl"), json.toJSONString(), new AsyncHttpResponseHandler() {
+                        @Override
+                        public void onFailure(int code, Header[] headers, byte[] responseBody, Throwable error) {
+                            status.setTextColor(Color.parseColor("#ff1700"));
+                            status.setText("HTTP ERROR: " + code);
+                            status.setVisibility(View.VISIBLE);
+                            progress.dismiss();
+                        }
+
+                        @Override
+                        public void onSuccess(int code, Header[] headers, byte[] responseBody) {
+                            String res = new String(responseBody);
+                            Object obj = JSONValue.parse(res);
+                            JSONObject response = (JSONObject) obj;
+
+                            if (response.get("result") != null && response.get("result").equals("0") || Integer.parseInt(response.get("result").toString()) == 0) {
+                                status.setTextColor(Color.parseColor("#04ff00"));
+                                status.setText("SUCCESS");
+                                try {
+                                    fn.logout();
+                                } catch (IOException e) {
+                                    e.printStackTrace();
+                                }
+                            } else {
+                                status.setText(response.get("result").toString() + "\n" + response.get("resultText").toString());
+                                status.setTextColor(Color.parseColor("#ff1700"));
+                            }
+                            status.setVisibility(View.VISIBLE);
+                            progress.dismiss();
+                            fn.cancelNotify();
+                        }
+                    });
+                    break;
                 } catch (IOException | JSONException e) {
                     e.printStackTrace();
                 }
-                break;
+                return true;
         }
         return true;
-
     }
-
-    private void buildReply(boolean grand, Button accept, Button deny) throws JSONException, IOException {
+        private void buildReply(boolean grand, Button accept, Button deny) throws JSONException, IOException {
         accept.setEnabled(false);
         deny.setEnabled(false);
 
@@ -172,9 +204,7 @@ public class MainActivity extends AppCompatActivity {
         json.put("notificationId", fn.readSetting("notificationId"));
         json.put("confirmation", grand ? "approved" : "cancelled");
 
-        AsyncHttpClient client = new AsyncHttpClient();
-
-        client.post(ctx, fn.readSetting("serverUrl"), new StringEntity(json.toJSONString()), "application/json", new AsyncHttpResponseHandler() {
+        fn.makeRequest(fn.readSetting("serverUrl"), json.toJSONString(), new AsyncHttpResponseHandler() {
             @Override
             public void onFailure(int code, Header[] headers, byte[] responseBody, Throwable error) {
                 status.setTextColor(Color.parseColor("#ff1700"));
