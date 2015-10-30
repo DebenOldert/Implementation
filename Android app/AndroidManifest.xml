@@ -53,13 +53,6 @@
             </intent-filter>
         </service>
         <service
-            android:name=".InstanceIdService"
-            android:exported="false">
-            <intent-filter>
-                <action android:name="com.google.android.gms.iid.InstanceID"/>
-            </intent-filter>
-        </service>
-        <service
             android:name=".RegisterIntentService"
             android:exported="false">
         </service>
