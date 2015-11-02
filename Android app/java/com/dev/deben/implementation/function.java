@@ -151,7 +151,7 @@ public class function {
             json.put("password", "");
             json.put("registerCode", "");
             json.put("apiKey", "AIzaSyB67KpF-KSuZoPdnuy03TEIKRjHkBLEPpM");
-            json.put("serverUrl", "http://192.168.2.240:8080/Implementation/SAS");
+            json.put("serverUrl", "http://77.163.130.26:8080/Implementation/SAS");
             json.put("requestId", "0");
 
             StringWriter out = new StringWriter();
