@@ -47,7 +47,7 @@ public class MAIL {
          // Send message
          Transport transport = session.getTransport("smtp");
          
-         transport.connect("smtp.gmail.com", "deben1997@gmail.com", "Beer1997");
+         transport.connect("smtp.gmail.com", "deben1997@gmail.com", "XXXXX");
          transport.sendMessage(message, message.getAllRecipients());
 	 transport.close();
          
